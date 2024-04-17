@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import Searchbar from './Searchbar/Searchbar';
 import ImageGallery from './ImageGallery/ImageGallery';
@@ -8,64 +8,30 @@ import { fetchPhotos, per_page } from 'common/services/pixabayAPI';
 import 'react-toastify/dist/ReactToastify.min.css';
 import s from './App.module.css';
 
-class App extends Component {
-  state = {
-    page: 1,
-    searchQuery: '',
-    pictures: [],
-    isEndOfResults: false,
-    isLoading: false,
-  };
+const App = () => {
+  const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pictures, setPictures] = useState([]);
+  const [isEndOfResults, setIsEndOfResults] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  handleSubmit = query => {
-    if (!query) {
-      toast('Input should not be empty');
-
-      return;
-    }
-
-    if (query === this.state.searchQuery) {
-      toast(
-        'You are currently reviewing the results of this search. Try a different one'
-      );
-      return;
-    }
-
-    const normalizedQuery = removeWhitespaces(query);
-
-    this.setState({
-      page: 1,
-      searchQuery: normalizedQuery,
-      pictures: [],
-      isEndOfResults: false,
-      isLoading: true,
-    });
-  };
-
-  handleLoadMore = e => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
-
-    e.target.blur();
-  };
-
-  scrollToNextResult = () => {
+  const scrollToNextResult = () => {
+    console.log('scroll func');
     window.scrollBy({
       top: 560,
       behavior: 'smooth',
     });
   };
 
-  async componentDidUpdate(_, prevState) {
-    const { searchQuery, page } = this.state;
+  useEffect(() => {
+    if (!searchQuery) {
+      return; // cancel request on mount, when there is no searchQuery
+    }
 
-    if (prevState.searchQuery !== searchQuery || prevState.page !== page) {
-      this.setState({ isLoading: true });
+    setIsLoading(true);
 
-      try {
-        const res = await fetchPhotos(searchQuery, page);
-
+    fetchPhotos(searchQuery, page)
+      .then(res => {
         const {
           data: { hits, totalHits },
           status,
@@ -83,46 +49,65 @@ class App extends Component {
         }
 
         if (totalHits / per_page <= page) {
-          this.setState({ isEndOfResults: true });
+          setIsEndOfResults(true);
           toast("You've reached the end of results.");
         }
 
-        this.setState(
-          prevState => ({
-            pictures: [...prevState.pictures, ...hits],
-          }),
-          () => {
-            if (page > 1) {
-              this.scrollToNextResult();
-            }
-          }
-        );
-      } catch (error) {
+        setPictures(prev => [...prev, ...hits]);
+      })
+      .catch(error => {
         console.error(error);
-
         toast(`${error.message}`);
-      } finally {
-        this.setState({ isLoading: false });
-      }
+      })
+      .finally(() => {
+        setIsLoading(false);
+
+        if (page > 1) {
+          scrollToNextResult();
+        }
+      });
+  }, [searchQuery, page]);
+
+  const handleSubmit = query => {
+    if (!query) {
+      toast('Input should not be empty');
+
+      return;
     }
-  }
 
-  render() {
-    const { pictures, isEndOfResults, isLoading } = this.state;
+    if (query === searchQuery) {
+      toast(
+        'You are currently reviewing the results of this search. Try a different one'
+      );
+      return;
+    }
 
-    return (
-      <div className={s.App}>
-        <Searchbar onSubmit={this.handleSubmit} isLoading={isLoading} />
-        <ImageGallery pictures={pictures} />
+    const normalizedQuery = removeWhitespaces(query);
 
-        {!isEndOfResults && !!pictures.length && (
-          <LoadMoreButton onClick={this.handleLoadMore} />
-        )}
+    setPage(1);
+    setSearchQuery(normalizedQuery);
+    setPictures([]);
+    setIsEndOfResults(false);
+  };
 
-        <ToastContainer position="top-center" />
-      </div>
-    );
-  }
-}
+  const handleLoadMore = e => {
+    setPage(prev => prev + 1);
+
+    e.target.blur();
+  };
+
+  return (
+    <div className={s.App}>
+      <Searchbar onSubmit={handleSubmit} isLoading={isLoading} />
+      <ImageGallery pictures={pictures} />
+
+      {!isEndOfResults && !!pictures.length && (
+        <LoadMoreButton onClick={handleLoadMore} />
+      )}
+
+      <ToastContainer position="top-center" />
+    </div>
+  );
+};
 
 export default App;
