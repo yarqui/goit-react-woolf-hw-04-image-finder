@@ -1,9 +1,20 @@
-import React from 'react';
+import { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import ImageGalleryItem from 'components/ImageGalleryItem/ImageGalleryItem';
 import s from './ImageGallery.module.css';
 
 const ImageGallery = ({ pictures }) => {
+  const scrollToNextResult = () => {
+    window.scrollBy({
+      top: 560,
+      behavior: 'smooth',
+    });
+  };
+
+  useEffect(() => {
+    scrollToNextResult();
+  }, [pictures]);
+
   return (
     <ul className={s.ImageGallery}>
       {pictures?.map(({ id, tags, webformatURL, largeImageURL }) => {

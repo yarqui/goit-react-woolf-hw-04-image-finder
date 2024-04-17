@@ -15,14 +15,6 @@ const App = () => {
   const [isEndOfResults, setIsEndOfResults] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const scrollToNextResult = () => {
-    console.log('scroll func');
-    window.scrollBy({
-      top: 560,
-      behavior: 'smooth',
-    });
-  };
-
   useEffect(() => {
     if (!searchQuery) {
       return; // cancel request on mount, when there is no searchQuery
@@ -61,10 +53,6 @@ const App = () => {
       })
       .finally(() => {
         setIsLoading(false);
-
-        if (page > 1) {
-          scrollToNextResult();
-        }
       });
   }, [searchQuery, page]);
 
